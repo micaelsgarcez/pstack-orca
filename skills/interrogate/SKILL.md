@@ -46,17 +46,30 @@ Read `references/reviewer-prompt.md` and fill in the template with:
 3. The review rubric from `references/rubric.md`
 4. The code-quality lens from `references/code-quality-review.md`
 
-The same filled template goes to all reviewers, so every model applies the code-quality lens. Write it to `/tmp/interrogate-<slug>/prompt.md`.
+The same filled template goes to all reviewers, so every model applies the code-quality lens. Create a fresh `<run-dir>` with `mktemp -d`, under the session scratchpad when the harness names one and under `/tmp` otherwise, and write the filled template to `<run-dir>/prompt.md`.
 
-Load the `orchestration` skill and run its supervised loop as coordinator. Create one Run, then start every reviewer before the first wait, one call each. `ORCA` is the executable that skill resolves.
+Load the `orchestration` skill and run its supervised loop as coordinator. Create one Run, then start every reviewer before the first wait, one call each. `<label>` is the reviewer's letter from the table (`A`, `B`, ...), `<target>` is the absolute path of the repo or folder under review, and `ORCA` is the executable that skill resolves.
 
 ```text
-ORCA orchestration worker-start --spec "Read /tmp/interrogate-<slug>/prompt.md and follow it. Review only, edit nothing in the repo. Write your findings to /tmp/interrogate-<slug>/reviewer-<label>.md and pass that path as --report-path on worker_done." --agent <agent> --worktree current --json
+ORCA orchestration worker-start --spec "Target: <target>, read-only. Read <run-dir>/prompt.md and follow it. Review only, edit nothing. Write your findings to <run-dir>/reviewer-<label>.md and pass that path as --report-path on worker_done. Done when that file holds a '## Findings' section or the words 'no findings'." --agent <agent> --worktree current --json
 ```
 
-Add `--model` and `--effort` when the entry names them. Wait until every Dispatch settles, release each settled worker, then read the findings files.
+Add `--model` and `--effort` when the entry names them.
 
-If `worker-start` rejects an entry, run that reviewer on `claude` and say so. If Orca's runtime is not reachable, run the reviewers as in-process `Agent` subagents on the parent model and say in the verdict that the review lost its model diversity. Do not block the review on either.
+### Count each reviewer
+
+A reviewer counts when its `worker_done` carries `outcome: succeeded` and the `reportPath` in its payload names a file holding a `## Findings` section or `no findings`. Check this as each Dispatch settles, then release the worker. A reviewer that misses is dropped: a missing report is never an empty review. Continue once every Dispatch has settled, with the reviewers that count.
+
+### When a reviewer cannot start
+
+The two outputs of a non-zero `worker-start` take different paths:
+
+- **Refused**: the output is an `error.code` with no `failedStage` or `residualResources`, so no worker exists. Run that reviewer on bare `claude` when no other reviewer is on `claude`, and drop it otherwise.
+- **Failed or unknown**: the output names `failedStage` or `residualResources`, so a worker may still be running. Follow the orchestration skill's `references/recovery-and-cleanup.md`. The reviewer settles there or is dropped, and its seat stays empty.
+
+When no Orca worker can start at all, because `ORCA status --json` fails before the first launch or every entry is refused, run one in-process `Agent` subagent per entry on the parent model with the same prompt and file contract.
+
+Name every dropped or substituted reviewer in the verdict's Reviewers list. When two reviewers share a model, say that the review lost model diversity and count their agreement as one voice in Step 4.
 
 ## Step 4, Synthesize
 
@@ -94,7 +107,7 @@ Present the verdict in this structure:
 > [The stated intent paragraph from Step 2]
 
 ### Reviewers
-- Reviewer [label]: [agent and model], [N findings] (one bullet per reviewer)
+- Reviewer [label]: [agent and model], [N findings] (one bullet per reviewer; a dropped one reads `dropped, [reason]`)
 
 ### Act On
 [Findings that should be addressed. For each: description, which models raised it, why it matters.]
