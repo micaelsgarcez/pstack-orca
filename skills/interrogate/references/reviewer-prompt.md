@@ -1,6 +1,6 @@
 # Reviewer Prompt Template
 
-Build each reviewer subagent's prompt from this template, filling in the placeholders.
+Build the one prompt every reviewer reads from this template, filling in the placeholders.
 
 ---
 
@@ -54,7 +54,7 @@ For each finding, provide:
 
 ## Output
 
-Return your findings as a structured list. If you have zero findings, say so. An empty review is a valid outcome.
+Write your findings to the file your task names, as the structured list below. With zero findings, write "no findings". An empty review is a valid outcome.
 
 ```
 ## Findings
