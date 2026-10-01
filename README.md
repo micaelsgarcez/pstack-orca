@@ -1,4 +1,6 @@
-# pstack
+# pstack for orca
+
+this is a fork of [pstack](https://github.com/cursor/plugins/tree/main/pstack), adapted to run in claude code inside orca instead of cursor. the skills, playbooks, and principles are poteto's. the fork changes how they spawn agents, pick models, and drive apps. the intro below is his.
 
 i'm [poteto](https://x.com/poteto). i'm not a president or ceo, but i've worked with millions of lines of code at Meta, Netflix, and Cursor. i'm also on the react core team where i help build and maintain react compiler.
 
@@ -12,22 +14,38 @@ there's a growing sense that ai writes too much slop code. i agree. i don't want
 
 fork it. improve it. make it yours. PRs are welcome! 
 
+## what this fork changes
+
+- multi-model skills (`arena`, `architect`, `interrogate`, `swarm`) run each seat as an orca worker on its own agent cli, `claude` and `codex` by default, so a review panel really is two model families.
+- cursor cloud agents become orca workers, each in its own worktree.
+- single-model helpers (`how`, `why`, `reflect`, code delegates) run as claude code subagents.
+- model choices live in `~/.claude/rules/pstack-models.md`.
+- apps are driven through orca's embedded browser, orca terminals, and the `computer-use` skill.
+
 ## install
 
+you need [claude code](https://claude.com/claude-code) running in an orca terminal, with the orca `orchestration`, `orca-cli`, and `computer-use` skills installed (`orca skills install`). `codex` is optional and gives the panels a second model family. the pr scripts need `bun`, `gh`, and `jq`.
+
 ```bash
-/add-plugin pstack
+git clone https://github.com/micaelsgarcez/pstack-orca.git ~/pstack-src
+mkdir -p ~/.claude/skills ~/.claude/agents ~/.agents/skills
+ln -s ~/pstack-src/skills/* ~/.claude/skills/
+ln -s ~/pstack-src/agents/*.md ~/.claude/agents/
+ln -s ~/pstack-src/skills/* ~/.agents/skills/
 ```
+
+the last line lets `codex` workers read the same skills. start a new session after linking.
 
 ## get started
 
 two steps:
 
-1. run [`/setup-pstack`](./skills/setup-pstack/SKILL.md), pick a reasoning budget, and choose which models you want.
+1. run [`/setup-pstack`](./skills/setup-pstack/SKILL.md) and choose which model or orca agent each role uses. this step is optional, the defaults work without it.
 2. use [`/poteto-mode`](./skills/poteto-mode/SKILL.md) whenever you're doing anything that requires rigor.
 
 new here? the [pstack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs.
 
-that's it. the other skills are situational; the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) go to grok, while the hardest changes, prose, and judgment go to opus 5.5. the default panel is opus 5.5 / sol / grok. [`/setup-pstack`](./skills/setup-pstack/SKILL.md) changes any of it.
+that's it. the other skills are situational; the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) go to `sonnet` subagents, while the hardest changes, prose, and judgment stay on your session's model. the default panel is one `claude` worker and one `codex` worker. [`/setup-pstack`](./skills/setup-pstack/SKILL.md) changes any of it.
 
 ## usage
 
@@ -90,7 +108,7 @@ the full rules and playbooks live in [`skills/poteto-mode/SKILL.md`](./skills/po
 
 [`/poteto-mode`](./skills/poteto-mode/SKILL.md) is also a sticky mode: once entered it stays on across turns, applying itself when a playbook matches or the task needs rigor and staying out of the way otherwise. opt out any time by saying so.
 
-[`/poteto-mode`](./skills/poteto-mode/SKILL.md) works extremely well with cursor's `/loop` command. you can make cursor work for many hours without sacrificing rigor.
+[`/poteto-mode`](./skills/poteto-mode/SKILL.md) works extremely well with claude code's `/loop` command. you can make it work for many hours without sacrificing rigor.
 
 ## skills
 
@@ -115,12 +133,11 @@ the full rules and playbooks live in [`skills/poteto-mode/SKILL.md`](./skills/po
 | [`/recall`](./skills/recall/SKILL.md) | you're starting or resuming work and want your recent context on a topic rebuilt from your own chat history and the shared record, handed back as a tight current-state brief. |
 | [`/blast-radius`](./skills/blast-radius/SKILL.md) | you have a small-looking change and want to know what else it could break, with the one fact it's safe because of proven by running code, not asserted. |
 | [`/architect`](./skills/architect/SKILL.md) | you're about to write code that crosses a function boundary and want the caller's usage, types, and module shape settled first. |
-| [`/arena`](./skills/arena/SKILL.md) | you want N parallel attempts at the same thing, then to grab the best parts of each. |
-| [`/swarm`](./skills/swarm/SKILL.md) | you want N parallel workers across different slices or races, then one aggregated report. |
-| [`/interrogate`](./skills/interrogate/SKILL.md) | you have a diff and want several different models to try to break it, including a strict code-quality lens. |
+| [`/arena`](./skills/arena/SKILL.md) | you want N parallel attempts at the same thing, each an orca worker, then to grab the best parts of each. |
+| [`/swarm`](./skills/swarm/SKILL.md) | you want N parallel orca workers across different slices or races, then one aggregated report. |
+| [`/interrogate`](./skills/interrogate/SKILL.md) | you have a diff and want different agents on different models to try to break it, including a strict code-quality lens. |
 | [`/automate-me`](./skills/automate-me/SKILL.md) | you want your own `-mode` skill, drafted from how you've actually worked. |
-| [`/make-bot-ui`](./skills/make-bot-ui/SKILL.md) | you want a page or dashboard whose buttons wake a Grok Bot over a webhook, including the sender-key handoff and Tailscale. |
-| [`/setup-pstack`](./skills/setup-pstack/SKILL.md) | you want to pick which models pstack uses per role. detects your models and writes a config rule. |
+| [`/setup-pstack`](./skills/setup-pstack/SKILL.md) | you want to pick which model or orca agent pstack uses per role. detects what you have and writes `~/.claude/rules/pstack-models.md`. |
 | [`/reflect`](./skills/reflect/SKILL.md) | a long task landed and you want the recipe captured as a skill edit. |
 | [`/teach`](./skills/teach/SKILL.md) | you want to actually understand a change or subsystem, not just have it summarized. runs how + why and weaves one plain explanation, built up diagram by diagram. |
 | [`/tdd`](./skills/tdd/SKILL.md) | you're fixing a bug and there's a cheap local test path. write the failing test first, then the fix. |
@@ -185,7 +202,7 @@ automate-me:       /automate-me
 
 ## the `poteto-agent` and Comment Sicko subagents
 
-pstack also ships a subagent that runs my style end to end. spawn it from a parent agent via [`subagent_type: "poteto-agent"`](./agents/poteto-agent.md). it reads `poteto-mode` in full, including its inline principles index, before doing any work. substituting `generalPurpose` skips that read and drifts.
+pstack also ships a subagent that runs my style end to end. spawn it from a parent agent via [`subagent_type: "poteto-agent"`](./agents/poteto-agent.md). it reads `poteto-mode` in full, including its inline principles index, before doing any work. substituting `general-purpose` skips that read and drifts.
 
 [`/poteto-mode`](./skills/poteto-mode/SKILL.md) and [`subagent_type: "poteto-agent"`](./agents/poteto-agent.md) route through the same wrapper.
 
@@ -230,15 +247,15 @@ twenty-three short skills, one principle each. `poteto-mode` indexes them inline
 
 a few things `poteto-mode` references but doesn't bundle:
 
-- `/deslop` and the `deslop` skill ship in the `cursor-team-kit` plugin.
-- `control-cli` (for CLIs and TUIs) and `control-ui` (for browser, Electron, web) ship in `cursor-team-kit` too.
-- `/create-skill` is a cursor built-in. cursor also ships a built-in `/babysit`; inside `poteto-mode`, the [babysit playbook](./skills/poteto-mode/playbooks/babysit.md) supersedes it for pr-status requests.
+- `orchestration`, `orca-cli`, and `computer-use` ship with orca. they start the workers and drive the embedded browser, terminals, and desktop windows. the control skill for a web ui, cli, or tui is `orca-cli`.
+- `/simplify` and `/loop` are claude code built-ins. `/simplify` replaces cursor's `/deslop`.
+- `writing-for-agents` replaces cursor's `create-skill` for authoring a `SKILL.md`. install it separately.
 
-install `cursor-team-kit` alongside pstack if you want the full set.
+every pstack skill sets `disable-model-invocation`, so you start one with its slash command, and one skill loads another by reading its `SKILL.md`.
 
 ## why are there no planning skills?
 
-cursor already has a great plan mode which works great with pstack. but personally, i don't believe in planning. the best spec is code. if you do want to make a plan, [`/poteto-mode`](./skills/poteto-mode/SKILL.md) covers it, but it's not a default. 
+claude code already has a plan mode which works great with pstack. but personally, i don't believe in planning. the best spec is code. if you do want to make a plan, [`/poteto-mode`](./skills/poteto-mode/SKILL.md) covers it, but it's not a default. 
 
 ## make it yours
 
@@ -246,15 +263,17 @@ cursor already has a great plan mode which works great with pstack. but personal
 
 type [`/automate-me`](./skills/automate-me/SKILL.md). it mines your recent transcripts, drafts a `<your-name>-mode` skill from how you've actually worked, and routes through pstack underneath. you keep pstack as the base and end up with your own routing skill alongside `poteto-mode`.
 
-models are configurable too. type [`/setup-pstack`](./skills/setup-pstack/SKILL.md). it detects the models you have access to and writes a small always-applied rule mapping each role (code, judgment, the review panels) to a model. every skill reads it and falls back to sensible defaults when the rule is absent, so you override only what you want.
-
-a rule written before 0.15.3 pins the old default models. delete those role lines, or delete the file, then run `/setup-pstack` again. a rerun keeps any role whose model differs from the default.
+models are configurable too. type [`/setup-pstack`](./skills/setup-pstack/SKILL.md). it detects the subagent models and orca agents you have and writes a small always-applied rule, `~/.claude/rules/pstack-models.md`, mapping each role (code, judgment, the review panels) to a model or an agent. every skill reads it and falls back to sensible defaults when the rule is absent, so you override only what you want.
 
 ## automations
 
-pstack also ships a dormant [benny automation pack](./automations/benny/). benny triages slack issue reports, then reproduces and fixes confirmed bugs with real ui evidence. its files are not registered as slash skills.
+pstack also ships a dormant [benny automation pack](./automations/benny/). benny triages slack issue reports, then reproduces and fixes confirmed bugs with real ui evidence. it runs as two scheduled orca automations that poll the channel. its files are not registered as slash skills.
 
-to set it up, point cursor at [`FOR_AGENTS.md`](./automations/benny/FOR_AGENTS.md). setup copies the pack into the target repository at `.cursor/automations/benny/`, enables pstack there for shared skills, and keeps user configuration outside the copied pack.
+to set it up, point your agent at [`FOR_AGENTS.md`](./automations/benny/FOR_AGENTS.md). setup copies the pack into the target repository at `.claude/automations/benny/`, creates both automations disabled with `orca automations create`, and keeps user configuration outside the copied pack.
+
+## keeping up with upstream
+
+`origin` is this repository. `upstream` is `cursor/plugins`, where pstack lives under `pstack/`. every cursor-specific line there conflicts with this fork, so read the upstream diff (`git fetch upstream && git log upstream/main -- pstack`) and port what you want by hand.
 
 ## license
 

@@ -33,20 +33,12 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the Task tool. Use the `interrogate reviewers` line in `~/.cursor/rules/pstack-models.mdc`, one reviewer per entry, extending or shrinking the Reviewer A/B/C labels below to the configured entry count. If the rule or that line is missing, use the table defaults.
+Run the reviewers as Orca workers, so each one is a different agent CLI on a different model family. Use the `interrogate reviewers` line in `~/.claude/rules/pstack-models.md`, one reviewer per entry, extending or shrinking the Reviewer A/B labels below to the configured entry count. Each entry is an Orca launch entry of the form `<agent>[:<model>[:<effort>]]`. If the rule or that line is missing, use the table defaults.
 
-| Subagent | Default model |
+| Worker | Default agent |
 |----------|---------------|
-| Reviewer A | `claude-opus-5-5-max` |
-| Reviewer B | `gpt-5.6-sol-max` |
-| Reviewer C | `grok-4.7-xhigh-fast` |
-
-For each reviewer:
-- `subagent_type`: `generalPurpose`
-- `model`: the configured `interrogate reviewers` entry, or the table default with no configured line. For an `auto` or `inherit-parent` entry, omit `model` so that reviewer runs on the parent model.
-- `readonly`: `true`
-
-If the Task tool rejects a configured entry, run that reviewer on the table default of its family and say so. Families go by prefix: `claude-*`, `gpt-*`, and `grok-*`. With no family match, use Reviewer A's default. If it rejects a table default, check the valid slugs in the Task tool's error message, pick the closest equivalent (prefer the highest-reasoning tier of the same family), spawn with it, and open a separate PR to update the default table. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply either fallback to it.
+| Reviewer A | `claude` |
+| Reviewer B | `codex` |
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent
@@ -54,7 +46,17 @@ Read `references/reviewer-prompt.md` and fill in the template with:
 3. The review rubric from `references/rubric.md`
 4. The code-quality lens from `references/code-quality-review.md`
 
-The same filled template goes to all reviewers, so every model applies the code-quality lens.
+The same filled template goes to all reviewers, so every model applies the code-quality lens. Write it to `/tmp/interrogate-<slug>/prompt.md`.
+
+Load the `orchestration` skill and run its supervised loop as coordinator. Create one Run, then start every reviewer before the first wait, one call each. `ORCA` is the executable that skill resolves.
+
+```text
+ORCA orchestration worker-start --spec "Read /tmp/interrogate-<slug>/prompt.md and follow it. Review only, edit nothing in the repo. Write your findings to /tmp/interrogate-<slug>/reviewer-<label>.md and pass that path as --report-path on worker_done." --agent <agent> --worktree current --json
+```
+
+Add `--model` and `--effort` when the entry names them. Wait until every Dispatch settles, release each settled worker, then read the findings files.
+
+If `worker-start` rejects an entry, run that reviewer on `claude` and say so. If Orca's runtime is not reachable, run the reviewers as in-process `Agent` subagents on the parent model and say in the verdict that the review lost its model diversity. Do not block the review on either.
 
 ## Step 4, Synthesize
 
@@ -92,7 +94,7 @@ Present the verdict in this structure:
 > [The stated intent paragraph from Step 2]
 
 ### Reviewers
-- Reviewer [label]: [model name], [N findings] (one bullet per reviewer)
+- Reviewer [label]: [agent and model], [N findings] (one bullet per reviewer)
 
 ### Act On
 [Findings that should be addressed. For each: description, which models raised it, why it matters.]

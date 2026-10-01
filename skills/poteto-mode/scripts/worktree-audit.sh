@@ -22,9 +22,12 @@ prs=$(mktemp)
 gh pr list --author "@me" --state all --limit 1000 \
 	--json number,state,headRefName 2>/dev/null > "$prs" || echo "[]" > "$prs"
 
-# Transcripts dir: ~/.cursor/projects/<slugified-repo-path>/agent-transcripts.
-slug=$(printf '%s' "$main_wt" | sed 's#^/##; s#/#-#g')
-transcripts="$HOME/.cursor/projects/$slug/agent-transcripts"
+# Transcripts dir: ~/.claude/projects/<slug>, where slug is the session's cwd
+# with every non-alphanumeric character turned into "-". A chat is filed under
+# the cwd it started in, so each worktree also has a dir of its own.
+slugify() { printf '%s' "$1" | sed 's#[^A-Za-z0-9]#-#g'; }
+mtime() { stat -c '%Y' "$1" 2>/dev/null || stat -f '%m' "$1" 2>/dev/null; }
+transcripts="$HOME/.claude/projects/$(slugify "$main_wt")"
 now=$(date +%s)
 
 printf "SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT\tBUCKET\tWORKTREE\n"
@@ -60,15 +63,15 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
 		'.[] | select(.headRefName==$b) | "#\(.number)/\(.state)"' "$prs" 2>/dev/null | head -1)
 	[ -z "$pr" ] && pr="-"
 
-	# Most recent chat whose transcript operated in this worktree. Match path
+	# Most recent chat that operated in this worktree: one that ran inside it,
+	# or one in the main repo whose transcript names its path. Match the path
 	# followed by "/" or a quote so glint-482 does not match glint-482-r37.
 	last="-"; last_ts=0
-	if [ -d "$transcripts" ]; then
-		f=$(rg -l -e "${wt}/" -e "${wt}\"" "$transcripts" 2>/dev/null \
-			| xargs stat -f '%m %N' 2>/dev/null | sort -rn | head -1)
-		if [ -n "$f" ]; then last_ts=$(echo "$f" | awk '{print $1}')
-			last=$(date -r "$last_ts" '+%Y-%m-%d' 2>/dev/null); fi
-	fi
+	while read -r f; do
+		t=$(mtime "$f"); [ "${t:-0}" -gt "$last_ts" ] && last_ts=$t
+	done < <(grep -rlF -e "${wt}/" -e "${wt}\"" "$transcripts" 2>/dev/null
+		ls "$HOME/.claude/projects/$(slugify "$wt")"/*.jsonl 2>/dev/null)
+	[ "$last_ts" -gt 0 ] && last=$(date -d "@$last_ts" '+%Y-%m-%d' 2>/dev/null || date -r "$last_ts" '+%Y-%m-%d')
 	recent=$([ "$last_ts" -gt 0 ] 2>/dev/null && [ $(( (now - last_ts) / 86400 )) -le 4 ] && echo yes || echo no)
 
 	case "$dirty" in wip:*) bucket=hold-wip ;; *)

@@ -3,6 +3,10 @@ schema_version: 1
 automations:
   triage_name: "benny-triage"
   reproduce_name: "benny-reproduce"
+  # Orca automations are scheduled. Each run polls the source channel.
+  provider: "claude"
+  triage_schedule: "*/10 * * * *"
+  reproduce_schedule: "*/15 * * * *"
 
 slack:
   source_channel_id: "SOURCE_CHANNEL_ID"
@@ -12,7 +16,7 @@ slack:
   thread_post_action: "configured-slack-thread-post-action"
   file_download_action: "configured-slack-file-download-action"
   operations_edit_action: "configured-slack-edit-action"
-  prefer_cursor_actions: true
+  prefer_mcp_actions: true
   optional_bot_token_env: "BENNY_SLACK_BOT_TOKEN"
   allow_source_root_posts: false
   allow_worker_slack_writes: false
@@ -20,7 +24,7 @@ slack:
 repository:
   url: "https://github.com/example-org/example-repo"
   default_branch: "main"
-  pull_request_action: "configured-draft-pull-request-action"
+  pull_request_action: "gh pr create --draft"
   pull_request_url_format: "https://github.com/{owner}/{repo}/pull/{number}"
   draft_only: true
 
@@ -39,14 +43,14 @@ tracker:
   require_compensation_action: true
 
 routing:
-  map_path: ".cursor/benny/routing.md"
+  map_path: ".claude/benny/routing.md"
   owner_pings_default: false
   allow_feature_owner_ping: false
   allow_confirmed_regression_author_ping: false
 
 control:
   skill_name: "control-target-app"
-  feature_map_path: ".cursor/benny/feature-map.md"
+  feature_map_path: ".claude/benny/feature-map.md"
   environment: "safe-test-environment-placeholder"
   artifact_directory: "/tmp/benny-artifacts"
   artifact_retention_hours: 24
@@ -68,6 +72,7 @@ status_emoji:
   pull_request_opened: "🔗"
 
 budgets:
+  poll_lookback_minutes: 120
   poll_seconds: 45
   verdict_wait_minutes: 45
   triage_follow_up_minutes: 10
@@ -77,8 +82,10 @@ budgets:
   fix_minutes: 90
   operations_follow_up_minutes: 45
 
+# The automation itself runs on the provider's configured model. These are the
+# `Agent` model aliases for its subagents, or `inherit-parent`.
 models:
-  triage: "choose-an-available-public-model-slug"
-  reproduce: "choose-an-available-public-model-slug"
-  code: "choose-an-available-public-model-slug"
-  media_review: "choose-an-available-public-model-slug"
+  triage: "inherit-parent"
+  reproduce: "inherit-parent"
+  code: "inherit-parent"
+  media_review: "inherit-parent"
