@@ -132,6 +132,7 @@ to keep [`/poteto-mode`](./skills/poteto-mode/SKILL.md) on across turns, pick it
 | [`/how`](./skills/how/SKILL.md) | you want a walkthrough of how a subsystem works. |
 | [`/why`](./skills/why/SKILL.md) | you want to know why something was built this way. discovers available MCPs at run time and queries each evidence category in parallel (source control, issue tracker, long-form docs, real-time chat, infra observability, error tracking, analytics warehouse). |
 | [`/recall`](./skills/recall/SKILL.md) | you're starting or resuming work and want your recent context on a topic rebuilt from your own chat history and the shared record, handed back as a tight current-state brief. |
+| [`/ketchup`](./skills/ketchup/SKILL.md) | you want everything in this chat since your last message, in plain words, with an executive summary for each action item so you can make the call. |
 | [`/blast-radius`](./skills/blast-radius/SKILL.md) | you have a small-looking change and want to know what else it could break, with the one fact it's safe because of proven by running code, not asserted. |
 | [`/architect`](./skills/architect/SKILL.md) | you're about to write code that crosses a function boundary and want the caller's usage, types, and module shape settled first. |
 | [`/arena`](./skills/arena/SKILL.md) | you want N parallel attempts at the same thing, each an orca worker, then to grab the best parts of each. |
@@ -281,11 +282,11 @@ to set it up, point your agent at [`FOR_AGENTS.md`](./automations/benny/FOR_AGEN
 
 ## keeping up with upstream
 
-`origin` is this repository. `upstream` is `cursor/plugins`, where pstack lives under `pstack/`. every cursor-specific line there conflicts with this fork. last synced upstream commit: `df58112`. to port newer work, apply the upstream diff with a 3-way merge and resolve each conflict toward this fork's claude code and orca wording:
+`origin` is this repository. `upstream` is `cursor/plugins`, where pstack lives under `pstack/`. every cursor-specific line there conflicts with this fork. last synced upstream commit: `978ca6e`. to port newer work, apply the upstream diff with a 3-way merge and resolve each conflict toward this fork's claude code and orca wording:
 
 ```bash
 git fetch upstream
-git diff df58112 upstream/main -- pstack ':!pstack/.cursor-plugin' | git apply -3 -p2
+git diff 978ca6e upstream/main -- pstack ':!pstack/.cursor-plugin' | git apply -3 -p2
 ```
 
 then grep the result for cursor-only terms (`Task`, `generalPurpose`, `readonly`, `.mdc`, cloud agents, custom modes, model slugs) and update the commit id above.
