@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Investigate the motivation and intent behind code. The companion `how` skill answers what the code does and how it works. `why` answers what forces led to its shape.
 
-Each spawn below is an `Agent` call that names a role line in the `~/.claude/rules/pstack-models.md` rule and a default. Set `model` to that line's value, or to the default if the rule or the line is missing. Leave `model` unset when the value is `auto` or `inherit-parent`. If the `Agent` tool rejects a value, leave `model` unset and say so.
+Each spawn below is an `Agent` call that names a role line in the `~/.claude/rules/pstack-models.md` rule and a default. Set `model` to that line's value, or to the default if the rule or the line is missing. Leave `model` unset when the value is `auto` or `inherit-parent`. If the `Agent` tool rejects a value, leave `model` unset and say so. Pick each subagent's effort for the job, per the Subagents section of the **poteto-mode** skill.
 
 Every spawn is an `Agent` call with `subagent_type: general-purpose`. Keep `general-purpose`: it carries the MCP tools that the MCP-backed investigators and the synthesizer's citation spot-checks need. Investigators still shouldn't write anything.
 

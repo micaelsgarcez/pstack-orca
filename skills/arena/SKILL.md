@@ -14,7 +14,7 @@ Every candidate gets the same prompt, so the prompt is the contract.
 
 1. State the artifact each candidate is producing.
 2. Derive the rubric, 3-6 concrete gradeable criteria for what success looks like on *this* task. It is the picker's tool in Phase D. Candidates only see the task.
-3. Pick the runners. Use the `arena runners` line in `~/.claude/rules/pstack-models.md`. Each entry is an Orca launch entry of the form `<agent>[:<model>[:<effort>]]`. If the rule or that line is missing, default to one each on `claude` and `codex`. If `worker-start` rejects an entry, run that seat on `claude` and say so. Spawn more when the arena covers multiple design directions. Same agent N times when the work is generation-bound rather than judgment-sensitive.
+3. Pick the runners. Use the `arena runners` line in `~/.claude/rules/pstack-models.md`. Each entry is an Orca launch entry of the form `<agent>[:<model>[:<effort>]]`. If the rule or that line is missing, default to one each on `claude` and `codex`. If `worker-start` rejects an entry, run that seat on `claude` and say so. Spawn more when the arena covers multiple design directions. Same agent N times when the work is generation-bound rather than judgment-sensitive. Pick each subagent's effort for the job, per the Subagents section of the **poteto-mode** skill.
 4. Assign output paths. Each candidate writes to its own location (its own Orca worktree when the artifact is code in the repo, otherwise `/tmp/arena-<slug>/candidate-<n>/`), per the **separate-before-serializing-shared-state** principle skill.
 
 ## Phase B: Fan out
