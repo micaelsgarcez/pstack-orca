@@ -32,13 +32,15 @@ You only override what you care about. A role with no line in the rule keeps the
 
 Roles come in two kinds. A subagent role (code delegates, `how`, `why`, `reflect`) takes a Claude Code model alias such as `sonnet`. Set it to `inherit-parent` or `auto` and pstack omits the subagent `model` field, so the subagent inherits your session's model. A worker role (`arena`, `architect`, `interrogate`, `swarm`) takes Orca agents, written as `<agent>`, `<agent>:<model>`, or `<agent>:<model>:<effort>`. For a panel role the value is a list, and one Orca worker runs per entry, so the list length sets the panel size. The default panel is `claude, codex`. Setup also configures `swarm workers`, the default agent for every `/swarm` worker unless a race names one for each arm.
 
-## Accept the verification offer, or don't
+## Accept the verification offers, or don't
 
 At the end of setup, `/setup-pstack` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/create-verification-skill`](../../skills/create-verification-skill/SKILL.md).
 
 Say yes and it writes `.claude/skills/verify-<app>/`, a project-local skill that teaches agents to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
 
 If you're new to pstack, say yes. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you to check by hand. Of everything in this guide, the verification skill pays off the most.
+
+Then setup offers once to generate a formal verification skill with [`/create-formal-verification-skill`](../../skills/create-formal-verification-skill/SKILL.md), unless the project already has one. Tests check the cases someone thought to write. A formal verification skill checks one key property of your code, such as "a job never runs twice at once", in every case within a stated scope. Say yes when your code has concurrency, retries, a state machine, or a parser, where a bug is costly and tests rarely reach the case that breaks. Otherwise say no, and run it later if that changes. [Verify and ship](./06-verify-and-ship.md#prove-a-property-with-a-formal-verification-skill) covers it.
 
 After setup, start a new chat. The model rule applies to new sessions.
 
