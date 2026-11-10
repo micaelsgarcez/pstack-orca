@@ -19,13 +19,15 @@ Every candidate gets the same prompt, so the prompt is the contract.
 
 ## Phase B: Fan out
 
-Load the `orchestration` skill and run its supervised loop as coordinator. Create one Run, then start all N candidates before the first wait, one call each. `ORCA` is the executable that skill resolves.
+Load the `orchestration` skill. Write each candidate's prompt to its own file, start all N candidates, one call each, then end your turn. Orca wakes you as each candidate settles, so never poll or wait in a loop. The first `worker-start` creates the Run and the rest join it. `ORCA` is the executable that skill resolves.
 
 ```text
-ORCA orchestration worker-start --spec "<prompt>" --agent <agent> --worktree <placement> --json
+ORCA orchestration worker-start --spec-file <prompt-file> --agent <agent> --worktree <placement> --json
 ```
 
 Add `--model` and `--effort` when the entry names them. A candidate that writes code in the repo gets `--worktree new-child --name arena-<slug>-<n>`. A candidate that writes under `/tmp` uses `--worktree current`. Each prompt carries the task, the path to the shared grounding, its own output path, and instructions to produce the artifact and a short rationale naming the alternatives it considered and what it rejected.
+
+If `worker-start` exits non-zero, do not rerun it. An `error.code` with no `failedStage` or `residualResources` means no worker exists, so apply the Phase A fallback for that entry. Otherwise a worker may still be running, so follow the orchestration skill's `references/recovery-and-cleanup.md`.
 
 If Orca's runtime is not reachable, run the candidates as in-process `Agent` subagents on the parent model and record in the synthesis note that the arena lost its model diversity.
 
@@ -33,11 +35,11 @@ If a candidate produces no output, proceed with N-1 and note the dropout.
 
 ## Phase C: Cross-judge
 
-After all Phase B candidates settle, release their workers and choose one entry from the `arena cross-judge pool` line in `~/.claude/rules/pstack-models.md`. If the rule or that line is missing, choose from `claude` and `codex`. Prefer a different agent from the one you run as. Start one judge worker on that entry in the same Run with `--worktree current`, and tell it to edit nothing. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Don't spawn the judge while candidates are still writing.
+After all Phase B candidates settle, pick the judge from the `arena cross-judge pool` line in `~/.claude/rules/pstack-models.md`. If the rule or that line is missing, the pool is `claude` and `codex`. The judge never runs on the agent you run as: try only the entries on another agent, in pool order, and move to the next when `worker-start` refuses one. If none runs, skip the judge, pick the base alone in Phase D, and say so. Start one judge worker on that entry in the same Run with `--worktree current`, and tell it to edit nothing. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Don't spawn the judge while candidates are still writing.
 
 ## Phase D: Pick a base
 
-Read every candidate end to end before picking. Score each against the rubric criterion by criterion, not on holistic feel, and compare with the cross-judge. Agreement on the base confirms the pick. Disagreement means one of you is biased or the rubric was ambiguous. Read both rationales before deciding.
+Read every candidate end to end before picking. Score each against the rubric criterion by criterion, not on holistic feel, and compare with the cross-judge when Phase C ran one. Agreement on the base confirms the pick. Disagreement means one of you is biased or the rubric was ambiguous. Read both rationales before deciding.
 
 Pick the base a future maintainer can extend most easily without breaking invariants. When two feel tied, prefer the cleaner boundary or smaller API, per the Laziness Protocol.
 
@@ -51,8 +53,8 @@ If the candidates converge on one shape, that is strong agreement. Note it and s
 
 Verify the synthesized artifact like any other output, per the **prove-it-works** principle skill. If verification finds a problem the arena missed, either Phase A was wrong (re-frame and re-run) or a candidate caught it and you missed the graft (go back to Phase E). Don't paper over it.
 
-After verification, remove the candidate worktrees the arena created with `ORCA worktree rm`.
+After verification, remove each candidate worktree the arena created with `ORCA worktree rm --worktree <selector>`, which also closes its worker. That keeps the candidate's branch, so delete it with `git branch -D` once its grafts are in the base.
 
 ## Outputs
 
-One synthesized artifact, with a short synthesis note alongside naming the base and why, the cross-judge's verdict, each graft with its source candidate, what was rejected and why, any convergence or dropouts, and the verification result.
+One synthesized artifact, with a short synthesis note alongside naming the base and why, the cross-judge's verdict or that Phase C skipped the judge, each graft with its source candidate, what was rejected and why, any convergence or dropouts, and the verification result.
