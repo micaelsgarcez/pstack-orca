@@ -24,13 +24,15 @@ Open a todolist with one entry per phase before launching anything.
 
 ## Phase B: Fan out
 
-Load the `orchestration` skill and run its supervised loop as coordinator. Create one Run, then start all N workers before the first wait, one call each. `ORCA` is the executable that skill resolves.
+Load the `orchestration` skill. Write each brief to its own file, start all N workers, one call each, then end your turn. Orca wakes you as each worker settles, so never poll or wait in a loop. The first `worker-start` creates the Run and the rest join it. `ORCA` is the executable that skill resolves.
 
 ```text
-ORCA orchestration worker-start --spec "<brief>" --agent <agent> --worktree <placement> --json
+ORCA orchestration worker-start --spec-file <brief-file> --agent <agent> --worktree <placement> --json
 ```
 
 Add `--model` and `--effort` when the step 4 entry names them. A worker that writes gets its own worktree with `--worktree new-child --name <slug>-<n>`. A worker that only reads, verifies, or measures uses `--worktree current`. When a worker must start from a non-default pushed branch, pass `--base-branch <ref>`.
+
+If `worker-start` exits non-zero, do not rerun it. An `error.code` with no `failedStage` or `residualResources` means no worker exists, so apply Phase A step 3's fallback. Otherwise a worker may still be running, so follow the orchestration skill's `references/recovery-and-cleanup.md`.
 
 If Orca's runtime is not reachable, run the N workers as in-process `Agent` subagents on the parent model and say so in the report.
 
@@ -40,7 +42,7 @@ If a worker drops out, proceed with N-1 and note it.
 
 ## Phase C: Aggregate
 
-Wait until every Dispatch settles, release each settled worker, then read the report files. Drop a result that does not record the SHAs and method its brief names, and rerun that worker once. After a second miss, record a gap. A gap does not count as a pass. For coverage, every required slice needs a result. For a race, apply the selection rule declared up front. Use first pass, rank all, or best-of. Do not paste raw worker dumps.
+Once every Dispatch has settled, read the report files. A worker in `current` closes on its own. A worker in its own worktree stays open, so release it with `ORCA orchestration worker-release --dispatch <dispatch_id>` when no one will use its chat. Drop a result that does not record the SHAs and method its brief names, and rerun that worker once. After a second miss, record a gap. A gap does not count as a pass. For coverage, every required slice needs a result. For a race, apply the selection rule declared up front. Use first pass, rank all, or best-of. Do not paste raw worker dumps.
 
 ## Phase D: Report
 

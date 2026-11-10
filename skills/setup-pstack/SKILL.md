@@ -29,7 +29,7 @@ The default role-to-value mapping is the rule shape shown in step 5 below. If `~
 
 Show every role with its value, marking any value not in the detected set as needing a choice. Also list each line step 2 dropped. Ask whether to accept as-is or change specific roles. Prefer `AskUserQuestion` over free text. Offer the detected models plus `inherit-parent` for a subagent role, and the detected agents for a worker role.
 
-For panel roles (arena runners, architect runners, interrogate reviewers) the value is a list, and one worker runs per entry, so the list length sets the count. A panel earns its signal from different model families, so keep at least two agents in each list when two are available. `arena cross-judge pool` is also a list, but Arena selects one entry from it whose agent differs from the parent's when possible. `swarm workers` is the default for every worker unless a race or comparison assigns another agent per arm.
+For panel roles (arena runners, architect runners, interrogate reviewers) the value is a list, and one worker runs per entry, so the list length sets the count. A panel earns its signal from different model families, so keep at least two agents in each list when two are available. `arena cross-judge pool` is also a list, but Arena runs one judge. It tries only entries whose agent differs from the parent's, in list order, so order it by preference. `swarm workers` is the default for every worker unless a race or comparison assigns another agent per arm.
 
 ### 4. Validate
 
